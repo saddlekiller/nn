@@ -6,7 +6,7 @@ import pandas as pd
 import tensorflow as tf
 import os
 import cv2
-
+import matplotlib.pyplot as plt
 
 class tool(object):
     

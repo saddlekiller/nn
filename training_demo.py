@@ -3,7 +3,7 @@ import pandas as pd
 import tensorflow as tf
 import os
 import cv2
-import matplotlib.plotpy as plt
+import matplotlib.pyplot as plt
 
 graph=tf.Graph()
 with graph.as_default():
