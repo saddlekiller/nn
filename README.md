@@ -1,5 +1,8 @@
 # nn
+# Description
 This is a private reseach project. The database used here is CIFAR. The framework is Tensorflow.
+
+# Modules
 layers.py
 A module contains basic implemented layers e.g. affine layer, reshape layer, convolution layer, maxpooling layer etc.
 models.py
