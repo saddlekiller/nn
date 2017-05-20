@@ -115,3 +115,4 @@ class reshape_layer(layer):
     def get_outputs(self,shape):
         self.outputs=tf.reshape(self.inputs,shape)
         return self.outputs
+
