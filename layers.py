@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+# coding=utf-8
 class param(object):
     
     def weights(name,shape,initialize_mode=tf.random_normal_initializer,

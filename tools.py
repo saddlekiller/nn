@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+
+# coding=utf-8
+
 class tool(object):
     
     def plot_raw_image(data):
