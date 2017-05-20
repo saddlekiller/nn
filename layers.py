@@ -16,7 +16,7 @@ class param(object):
         weights=tf.get_variable(
             name=name,
             shape=shape,
-            initializer=initialize_mode(stddev=1./float(shape[-1]**0.5)),
+            initializer=initialize_mode(stddev=1./float(np.sum(shape)**0.5)),
             regularizer=reg(reg_const)
         )
         return weights
@@ -35,7 +35,7 @@ class param(object):
         kernels=tf.get_variable(
             name=name,
             shape=shape,
-            initializer=initialize_mode(stddev=1./float(shape[-1]**0.5)),
+            initializer=initialize_mode(stddev=1./float(np.sum(shape)**0.5)),
             regularizer=reg(reg_const)
         )
         return kernels
@@ -59,14 +59,14 @@ class layer(object):
         
 class affine_layer(layer):
     
-    def __init__(self,name,inputs,weights_shape=[]):
+    def __init__(self,name,inputs,weights_shape=[],reg_const=0.0):
         self.name=name
         self.inputs=inputs
-        self.initialize(weights_shape)
+        self.initialize(weights_shape,reg_const=0.0)
     
-    def initialize(self,weights_shape):
-        self.weights=param.weights(name=self.name+'_w',shape=weights_shape)
-        self.biases=param.biases(name=self.name+'_b',shape=weights_shape[-1])
+    def initialize(self,weights_shape,reg_const):
+        self.weights=param.weights(name=self.name+'_w',shape=weights_shape,reg_const=reg_const)
+        self.biases=param.biases(name=self.name+'_b',shape=weights_shape[-1],reg_const=reg_const)
         
     def set_weights(self,weights,biases):
         self.weights=weights
@@ -78,14 +78,14 @@ class affine_layer(layer):
     
 class convolution_layer(layer):
     
-    def __init__(self,name,inputs,kernel_shape=[]):
+    def __init__(self,name,inputs,kernel_shape=[],reg_const=0.0):
         self.name=name
         self.inputs=inputs
-        self.initialize(kernel_shape)
+        self.initialize(kernel_shape,reg_const)
         
-    def initialize(self,kernel_shape):
-        self.kernels=param.kernels(name=self.name+'_k',shape=kernel_shape)
-        self.biases=param.biases(name=self.name+'_b',shape=kernel_shape[-1])
+    def initialize(self,kernel_shape,reg_const):
+        self.kernels=param.kernels(name=self.name+'_k',shape=kernel_shape,reg_const=reg_const)
+        self.biases=param.biases(name=self.name+'_b',shape=kernel_shape[-1],reg_const=reg_const)
     
     def set_weights(self,kernels,biases):
         self.kernels=kernels
@@ -126,4 +126,3 @@ class reshape_layer(layer):
     def get_outputs(self,shape):
         self.outputs=tf.reshape(self.inputs,shape)
         return self.outputs
-

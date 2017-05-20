@@ -13,38 +13,39 @@ from dataProvider import *
 [train_data,train_label_map]=dataProvider('../data/cifar-10-train.npz').get_batch(is_reshaped=True)
 [valid_data,valid_label_map]=dataProvider('../data/cifar-10-valid.npz').get_batch(is_reshaped=True)
 
+
 graph=tf.Graph()
 with graph.as_default():
     
     placeholder_input=tf.placeholder(tf.float32,[None,32,32,3],'holder_input')
     placeholder_target=tf.placeholder(tf.float32,[None,10],'holder_target')
     
-    conv1_layer=convolution_layer(inputs=placeholder_input,kernel_shape=[5,5,3,6],name='conv1_layer')
+    conv1_layer=convolution_layer(inputs=placeholder_input,kernel_shape=[5,5,3,6],name='conv1_layer',reg_const=0.001)
     conv1_out=conv1_layer.get_outputs(active=tf.nn.relu,padding='VALID')
     
     max1_layer=maxpooling_layer(inputs=conv1_out,name='max1_layer')
     max1_out=max1_layer.get_outputs(padding='VALID',strides=[1,2,2,1])
     
-    conv2_layer=convolution_layer(inputs=max1_out,kernel_shape=[5,5,6,16],name='conv2_layer')
+    conv2_layer=convolution_layer(inputs=max1_out,kernel_shape=[5,5,6,16],name='conv2_layer',reg_const=0.001)
     conv2_out=conv2_layer.get_outputs(active=tf.nn.relu,padding='VALID')
     
     max2_layer=maxpooling_layer(inputs=conv2_out,name='max2_layer')
     max2_out=max2_layer.get_outputs(padding='VALID',strides=[1,2,2,1])
     
-    conv3_layer=convolution_layer(inputs=max2_out,kernel_shape=[5,5,16,64],name='conv3_layer')
+    conv3_layer=convolution_layer(inputs=max2_out,kernel_shape=[5,5,16,64],name='conv3_layer',reg_const=0.001)
     conv3_out=conv3_layer.get_outputs(active=tf.nn.relu,padding='VALID')
     
     reshape1_layer=reshape_layer(inputs=conv3_out,name='reshape1_layer')
     reshape1_out=reshape1_layer.get_outputs([-1,64])
     
-    affine1_layer=affine_layer(inputs=reshape1_out,weights_shape=[64,128],name='affine1_layer')
+    affine1_layer=affine_layer(inputs=reshape1_out,weights_shape=[64,128],name='affine1_layer',reg_const=0.001)
     affine1_out=affine1_layer.get_outputs(tf.nn.relu)
         
-    affine2_layer=affine_layer(inputs=affine1_out,weights_shape=[128,256],name='affine2_layer')
+    affine2_layer=affine_layer(inputs=affine1_out,weights_shape=[128,64],name='affine2_layer',reg_const=0.001)
     affine2_out=affine2_layer.get_outputs(tf.nn.relu)
         
-    affine3_layer=affine_layer(inputs=affine2_out,weights_shape=[256,10],name='affine3_layer')
-    affine3_out=affine3_layer.get_outputs(tf.nn.softmax)
+    affine3_layer=affine_layer(inputs=affine2_out,weights_shape=[64,10],name='affine3_layer',reg_const=0.001)
+    affine3_out=affine3_layer.get_outputs(tf.identity)
     
     print('################ STRUCTURE ################')
     print(conv1_out)
@@ -58,12 +59,12 @@ with graph.as_default():
     print(affine3_out)
     print('###########################################')
     
-    loss=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=affine3_out,labels=placeholder_target))
+    loss=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=affine3_out,labels=placeholder_target))+sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
     train_step=tf.train.AdamOptimizer().minimize(loss)
     acc=tf.reduce_mean(tf.cast(tf.equal(tf.argmax(affine3_out,1),tf.argmax(placeholder_target,1)),tf.float32))
-    iteration=200
-    interval=10
-    storage={'index':[],'acc':[],'error':[],'conv1':[],'conv2':[],'conv3':[],'kernel1':[],'kernel2':[],'kernel3':[]}
+    iteration=100
+    interval=5
+    storage={'index':[],'acc':[],'error':[],'conv1':[],'conv2':[],'conv3':[],'kernel1':[],'kernel2':[],'kernel3':[],'out':[]}
     
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -72,7 +73,7 @@ with graph.as_default():
             accs=0.
             index=0
             for input_batch,target_batch in zip(train_data['inputs'],train_data['targets']):
-#                 if index==2:
+#                 if index==10:
 #                     break
                 feed={placeholder_input:input_batch,placeholder_target:target_batch}
                 _,e,a=sess.run([train_step,loss,acc],feed_dict=feed)
@@ -83,8 +84,9 @@ with graph.as_default():
             accs/=index
             if i%interval==0:
                 print('epoch # {0:02d}: training error = {1:.4f} training accuracy = {2:.4f}'.format(i+1,errors,accs))
-                c1,c2,c3,k1,k2,k3=sess.run([conv1_layer.outputs,conv2_layer.outputs,conv3_layer.outputs,
-                                            conv1_layer.kernels,conv2_layer.kernels,conv3_layer.kernels
+                c1,c2,c3,k1,k2,k3,o1=sess.run([conv1_layer.outputs,conv2_layer.outputs,conv3_layer.outputs,
+                                            conv1_layer.kernels,conv2_layer.kernels,conv3_layer.kernels,
+                                            affine3_layer.outputs
                                            ],feed_dict={placeholder_input:train_data['inputs'][0],
                                                         placeholder_target:train_data['targets'][0]})
 
@@ -97,11 +99,12 @@ with graph.as_default():
                 storage['kernel1'].append(k1)
                 storage['kernel2'].append(k2)
                 storage['kernel3'].append(k3)
+                storage['out'].append(o1)
                 valid_err=0.
                 valid_acc=0.
                 valid_index=0
                 for input_batch,target_batch in zip(valid_data['inputs'],valid_data['targets']):
-#                     if valid_index==2:
+#                     if valid_index==10:
 #                         break
                     feed={placeholder_input:input_batch,placeholder_target:target_batch}
                     e,a=sess.run([loss,acc],feed_dict=feed)
