@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
 # coding=utf-8
+import numpy as np # linear algebra
+import pandas as pd
+import os
+
+
 class dataProvider(object):
     
     def __init__(self,filename,batch_size=50):

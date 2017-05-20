@@ -1,3 +1,9 @@
+import numpy as np # linear algebra
+import pandas as pd
+import os
+import cv2
+import matplotlib.pyplot as plt
+
 index=10
 for j in range(4):
     plt.figure()

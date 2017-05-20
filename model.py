@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
 # coding=utf-8
+import numpy as np # linear algebra
+import pandas as pd
+import tensorflow as tf
+import os
+import cv2
+
 
 class model(object):
     
