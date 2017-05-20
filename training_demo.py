@@ -4,6 +4,14 @@ import tensorflow as tf
 import os
 import cv2
 import matplotlib.pyplot as plt
+from layers import *
+from tools import *
+from models import *
+from dataProvider import *
+
+
+[train_data,train_label_map]=dataProvider('../data/cifar-10-train.npz').get_batch(is_reshaped=True)
+[valid_data,valid_label_map]=dataProvider('../data/cifar-10-valid.npz').get_batch(is_reshaped=True)
 
 graph=tf.Graph()
 with graph.as_default():
