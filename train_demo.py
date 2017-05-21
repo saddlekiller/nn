@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-
-# coding=utf-8
 import numpy as np # linear algebra
 import pandas as pd
+import tensorflow as tf
 import os
+import cv2
 
 class dataProvider(object):
     
@@ -51,7 +50,6 @@ class dataProvider(object):
         for i in range(self.total_num):
             target_new[i][self.target[i]]=1
         self.target=target_new
-
 
 
 
