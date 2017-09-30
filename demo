@@ -1,0 +1,110 @@
+import numpy as np # linear algebra
+import pandas as pd
+import tensorflow as tf
+import os
+import cv2
+import matplotlib.pyplot as plt
+from layers import *
+from tools import *
+from models import *
+from dataProvider import *
+%matplotlib inline
+
+def batch(data, label, batch_size = 50):
+
+    batch_size -= 1
+    num = int(len(data) / batch_size)
+    indexes = np.arange(len(data))
+    np.random.shuffle(indexes)
+#     plt.plot(indexes,'.')
+    res_data = {}
+    res_label = {}
+    for i in range(batch_size):
+        res_data[i] = np.array(data[i:(i+1)*num,:])
+        res_label[i] = np.array(label[i:(i+1)*num,:])
+#         print(i)
+    i += 1
+    res_data[i] = np.array(data[i:,:])
+    res_label[i] = np.array(label[i:,:])
+    
+    return res_data, res_label
+    
+    data = np.load('../data/data_unique.npz')['arr_0']
+label = np.load('../data/label_unique.npz')['arr_0']
+indexes = np.arange(len(data))
+maximum = int(len(data)*0.8)
+np.random.shuffle(indexes)
+
+train_data = data[indexes[:maximum],:]
+train_label = label[indexes[:maximum],:]
+
+valid_data = data[indexes[maximum:],:]
+valid_label = label[indexes[maximum:],:]
+
+train = {}
+train['data'] = train_data
+train['label'] = train_label
+valid = {}
+valid['data'] = valid_data
+valid['label'] = train_label
+# np.savez_compressed('trainingset.npz', train)
+# np.savez_compressed('validationset.npz', valid)
+# train_data, train_label = batch(train_data, train_label)
+# valid_data, valid_label = batch(valid_data, valid_label)
+
+batch_size = 50
+train_data_all, train_label_all = batch(train_data, train_label, batch_size = batch_size)
+valid_data_all, valid_label_all = batch(valid_data, valid_label, batch_size = batch_size)
+
+graph=tf.Graph()
+with graph.as_default():
+    
+    placeholder_input=tf.placeholder(tf.float32,[None,100],'holder_input')
+    placeholder_target=tf.placeholder(tf.float32,[None,318],'holder_target')
+    
+    affine1_layer=affine_layer(inputs=placeholder_input,weights_shape=[100,200],name='affine1_layer',reg_const=0.01)
+    affine1_out=affine1_layer.get_outputs(tf.nn.relu)
+        
+#     affine2_layer=affine_layer(inputs=affine1_out,weights_shape=[200,64],name='affine2_layer',reg_const=0.001)
+#     affine2_out=affine2_layer.get_outputs(tf.nn.relu)
+        
+    affine3_layer=affine_layer(inputs=affine1_out,weights_shape=[200,318],name='affine3_layer')
+    affine3_out=affine3_layer.get_outputs(tf.identity)
+    
+    
+    loss=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=affine3_out,labels=placeholder_target))+sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+    train_step=tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
+    acc=tf.reduce_mean(tf.cast(tf.equal(tf.argmax(affine3_out,1),tf.argmax(placeholder_target,1)),tf.float32))
+    iteration=2000
+    interval=5
+
+    sess = tf.Session()
+#     with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    for i in range(iteration):
+        err = 0.0
+        accs = 0.0
+        s = 0
+        for batch_data, batch_label in zip(train_data_all.values(), train_label_all.values()):
+            feed={placeholder_input:batch_data, placeholder_target:batch_label}
+            _,e,a=sess.run([train_step,loss,acc],feed_dict=feed)
+            err += e
+            accs += a
+            s += 1
+        error = err/s
+        accuracy = accs/s
+        print('epoch # {0:02d}: training error = {1:.4f} training accuracy = {2:.4f}'.format(i+1,error,accuracy))
+        if i % interval == 0:
+            err1 = 0.0
+            accs1 = 0.0
+            s1 = 0
+            for batch_data, batch_label in zip(valid_data_all.values(), valid_label_all.values()):
+                feed={placeholder_input:batch_data, placeholder_target:batch_label}
+                e1,a1=sess.run([loss,acc],feed_dict=feed)
+                err1 += e1
+                accs1 += a1
+                s1 += 1
+            error1 = err1/s1
+            accuracy1 = accs1/s1
+            print('epoch # {0:02d}: validation error = {1:.4f} validation accuracy = {2:.4f}'.format(i+1,error1,accuracy1))
+
